@@ -14,6 +14,7 @@ const renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.35;
@@ -75,6 +76,7 @@ function rebuild({thumbnails = false} = {}) {
   updateMaterials(materials, $('finish').value, $('accent').value);
   assembly.clear(); groups.clear();
   for (const p of parts) {const g = makeModule(p, materials); assembly.add(g); groups.set(p.id, g);}
+  renderer.shadowMap.needsUpdate = true;
   highlight();
   $('parts').textContent = parts.length;
   $('count').textContent = `${parts.length} PARTS`;

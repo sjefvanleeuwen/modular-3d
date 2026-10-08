@@ -61,3 +61,14 @@ test('imports reject non-finite coordinates and invalid rotation; config is boun
   const c=normalizeConfig({width:1000,levels:-3,accent:'invalid',roof:'invalid'});
   assert.equal(c.width,8);assert.equal(c.levels,1);assert.equal(c.accent,DEFAULT_CONFIG.accent);assert.equal(c.roof,'mixed');
 });
+
+test('cantilever brackets contact their mounting façade at every level',()=>{
+  const config={...DEFAULT_CONFIG,levels:3},p=generateLayout(config);
+  for(const bracket of p.filter(x=>x.type==='brace')){
+    const facade=p.find(x=>WALL_TYPES.includes(x.type)&&x.x===bracket.x&&x.floor===bracket.floor&&x.rotation===bracket.rotation);
+    assert.ok(facade);
+    const b=new THREE.Box3().setFromObject(makeModule(bracket,materials,{edges:false}));
+    const wall=new THREE.Box3().setFromObject(makeModule(facade,materials,{edges:false}));
+    assert.ok(b.intersectsBox(wall),'bracket must touch its wall rather than float outside it');
+  }
+});

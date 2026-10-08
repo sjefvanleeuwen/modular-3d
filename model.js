@@ -61,8 +61,8 @@ export function generateLayout(input) {
   add('balcony', entrance, -1, 0, 0, {role: 'entry'});
   for (const x of [entrance - .43, entrance + .43]) add('pillar', x, -.64, 0, 0, {role: 'support'});
   for (let y = 0; y < levels; y++) {
-    add('brace', 0, depth - .3, y, 2, {role: 'support'});
-    add('brace', width - 1, -.7, y, 0, {role: 'support'});
+    add('brace', 0, depth - .52, y, 2, {role: 'support'});
+    add('brace', width - 1, -.48, y, 0, {role: 'support'});
   }
   // Service apron: utilities sit on tiles rather than float beside the building.
   for (let z = 0; z < depth; z++) add('floor', width, z, 0, 0, {role: 'apron'});
