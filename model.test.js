@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {generateLayout,validProject} from './model.js';
+const config={width:4,depth:3,levels:1,roof:'solar',preset:'outpost'};
+test('layout contains one entrance and correctly spaced floors',()=>{let p=generateLayout(config);assert.equal(p.filter(x=>x.type==='door').length,1);assert.equal(p.filter(x=>x.type==='floor'&&x.floor===0).length,12);assert.equal(p.filter(x=>x.type==='floor'&&x.floor===1).length,12);assert.ok(validProject({parts:p}));});
+test('cutaway removes rooftop equipment and upper slab',()=>{let p=generateLayout({...config,roof:'open'});assert.ok(!p.some(x=>['solar','antenna'].includes(x.type)));assert.equal(p.filter(x=>x.type==='floor').length,12);});
+test('empty preset and invalid import',()=>{assert.deepEqual(generateLayout({...config,preset:'blank'}),[]);assert.equal(validProject({parts:[{type:'bad'}]}),false);assert.equal(validProject({parts:[{type:'wall',x:Infinity,z:0,floor:0,rotation:0,variant:'standard'}]}),false);});
