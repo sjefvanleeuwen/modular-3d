@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build --base=./",
-    "test": "node --test model.test.js",
+    "test": "node --test model.test.js texture-math.test.js",
     "test:browser": "playwright test"
   },
   "dependencies": {

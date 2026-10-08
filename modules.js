@@ -9,9 +9,19 @@ export function createMaterials(finish = 'olive', accent = '#69e8c3') {
   updateMaterials(m, finish, accent);
   return m;
 }
-export function updateMaterials(m, finish, accent) {
+export function updateMaterials(m, finish, accent, surface = 'artwork') {
   const colors = {olive:['#888677','#a3a08e'],slate:['#718395','#99a9b4'],sand:['#b7a382','#cbbb97']}[finish] || ['#888677','#a3a08e'];
+  m.surface = surface;
   m.body.color.set(colors[0]);m.plate.color.set(colors[1]);m.light.color.set(accent);m.light.emissive.set(accent);m.light.emissiveIntensity=.8;
+  for(const name of ['body','plate','frame','edge','dark']){
+    const material=m[name], maps=surface==='artwork'?m.wearMaps:null;
+    material.map=maps?.map||null;material.bumpMap=maps?.bumpMap||null;material.bumpScale=.018;
+    material.roughnessMap=maps?.roughnessMap||null;material.needsUpdate=true;
+  }
+  if(m.artwork){
+    const tint={olive:'#ffffff',slate:'#dfebff',sand:'#ffe9c8'}[finish]||'#ffffff';
+    for(const material of Object.values(m.artwork)){material.color.set(tint);material.emissive.set(accent);}
+  }
 }
 export function makeModule(p, materials, {edges = true} = {}) {
   const g = new THREE.Group();
@@ -163,6 +173,65 @@ export function makeModule(p, materials, {edges = true} = {}) {
     const bounds=new THREE.Box3().setFromObject(g);const top=bounds.max.y;
     box(.19,.07,.19,0,top+.065,0,'light');
   }
+  if(materials.artworkReady && materials.surface !== 'clean') projectArtwork(g, p.type, materials);
   g.position.set(p.x*3,p.floor*3,p.z*3);g.rotation.y=p.rotation*Math.PI/2;g.userData.id=p.id;
   return g;
+}
+
+
+const projectedGeometryCache = new Map();
+const ART_PROJECTION = {
+  wall:{axis:'front',minX:-1.5,maxX:1.5,minV:0,maxV:3},
+  window:{axis:'front',minX:-1.5,maxX:1.5,minV:0,maxV:3},
+  door:{axis:'front',minX:-1.5,maxX:1.5,minV:0,maxV:3},
+  hatch:{axis:'front',minX:-1.5,maxX:1.5,minV:0,maxV:3},
+  solar:{axis:'top',minX:-1.44,maxX:1.44,minV:-1.44,maxV:1.44},
+  solarCorner:{axis:'top',minX:-1.44,maxX:1.44,minV:-1.44,maxV:1.44},
+  utility:{axis:'top',minX:-1.44,maxX:1.44,minV:-1.44,maxV:1.44},
+  sign:{axis:'front',minX:-.21,maxX:.99,minV:1.525,maxV:2.435},
+  vent:{axis:'front',minX:-.5,maxX:.5,minV:.335,maxV:2.105},
+};
+// Project the painting over the whole module in its own coordinates. Each
+// protruding mesh receives only its portion of the face, avoiding a complete
+// door/window image being repeated on every small box or on its side faces.
+function projectArtwork(group,type,materials){
+  const spec=ART_PROJECTION[type], paint=materials.artwork[type];if(!spec||!paint)return;
+  group.updateMatrixWorld(true);
+  group.traverse(o=>{
+    if(!o.isMesh||Array.isArray(o.material)||o.material===materials.light||o.material===materials.plant)return;
+    const key=JSON.stringify([type,o.geometry.uuid,o.matrixWorld.elements]);
+    let geometry=projectedGeometryCache.get(key);
+    if(!geometry){
+      geometry=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();geometry.clearGroups();
+      const positions=geometry.getAttribute('position');
+      const uv=geometry.getAttribute('uv')||new THREE.BufferAttribute(new Float32Array(positions.count*2),2);
+      const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),center=new THREE.Vector3();
+      let runStart=0,runMaterial=null,paintedCount=0;
+      for(let i=0;i<positions.count;i+=3){
+        a.fromBufferAttribute(positions,i).applyMatrix4(o.matrixWorld);
+        b.fromBufferAttribute(positions,i+1).applyMatrix4(o.matrixWorld);
+        c.fromBufferAttribute(positions,i+2).applyMatrix4(o.matrixWorld);
+        normal.subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a)).normalize();
+        center.copy(a).add(b).add(c).divideScalar(3);
+        const v=spec.axis==='front'?center.y:center.z;
+        const outward=spec.axis==='front'?normal.z<-.6:normal.y>.55;
+        const painted=outward&&center.x>=spec.minX-.01&&center.x<=spec.maxX+.01&&v>=spec.minV-.01&&v<=spec.maxV+.01;
+        if(painted)for(const [offset,point]of [[0,a],[1,b],[2,c]]){
+          const u=(point.x-spec.minX)/(spec.maxX-spec.minX);
+          const v=(spec.axis==='front'?point.y:point.z)-spec.minV;
+          uv.setXY(i+offset,spec.axis==='front'?1-u:u,v/(spec.maxV-spec.minV));
+        }
+        const materialIndex=painted?1:0;
+        if(painted)paintedCount++;
+        if(runMaterial===null)runMaterial=materialIndex;
+        else if(runMaterial!==materialIndex){geometry.addGroup(runStart,i-runStart,runMaterial);runStart=i;runMaterial=materialIndex;}
+      }
+      geometry.addGroup(runStart,positions.count-runStart,runMaterial);
+      geometry.userData.paintedCount=paintedCount;
+      geometry.setAttribute('uv',uv);projectedGeometryCache.set(key,geometry);
+    }
+    if(!geometry.userData.paintedCount)return;
+    o.geometry=geometry;o.material=[o.material,paint];
+    o.userData.artworkFace=type;
+  });
 }

@@ -1,14 +1,14 @@
 export const REVISION = 2;
 export const TYPES = ['wall', 'window', 'door', 'corner', 'solar', 'solarCorner', 'utility', 'antenna', 'hatch', 'sign', 'balcony', 'garden', 'reactor', 'pillar', 'vent', 'brace', 'floor'];
 export const WALL_TYPES = ['wall', 'window', 'door', 'hatch'];
-export const DEFAULT_CONFIG = {width: 4, depth: 3, levels: 1, roof: 'mixed', preset: 'outpost', finish: 'olive', accent: '#69e8c3'};
+export const DEFAULT_CONFIG = {width: 4, depth: 3, levels: 1, roof: 'mixed', preset: 'outpost', finish: 'olive', accent: '#69e8c3', surface: 'artwork'};
 
 export function normalizeConfig(raw = {}) {
   const v = {...DEFAULT_CONFIG, ...raw};
   for (const [key, min, max] of [['width', 2, 8], ['depth', 2, 8], ['levels', 1, 3]]) {
     v[key] = Math.max(min, Math.min(max, Math.round(Number(v[key]) || min)));
   }
-  for (const [key, values] of Object.entries({roof: ['mixed', 'solar', 'utility', 'flat', 'open'], preset: ['outpost', 'station', 'blank'], finish: ['olive', 'slate', 'sand']})) {
+  for (const [key, values] of Object.entries({roof: ['mixed', 'solar', 'utility', 'flat', 'open'], preset: ['outpost', 'station', 'blank'], finish: ['olive', 'slate', 'sand'], surface: ['artwork', 'clean']})) {
     if (!values.includes(v[key])) v[key] = DEFAULT_CONFIG[key];
   }
   if (!/^#[\da-f]{6}$/i.test(v.accent)) v.accent = DEFAULT_CONFIG.accent;

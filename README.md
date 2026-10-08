@@ -13,6 +13,11 @@ Width, depth, levels, and roof treatment regenerate the building and replace man
 
 This is a visual prototype: the shell audit checks the generated grid bays, not general collision safety, structural engineering, or arbitrary imported geometry.
 
+## Original artwork textures
+The default Original artwork surface style samples the untouched 512×512 concept sheet. Individual isometric front and roof faces are flattened into reusable textures at runtime and projected over each module's 3D surfaces. Source-derived wear, roughness, subtle relief, and cyan emissive details complement the geometry. Sides and supports use a sampled metal wear map. The source is a small concept sheet, so zooming in reveals its limited detail; generating larger canvases does not create additional source resolution.
+
+Use Surface style → Clean geometry to compare with the procedural finish. Changing the style preserves the layout and works in rendered kit thumbnails, JSON export, and autosave.
+
 ## Verification and deployment
 `npm test` verifies full kit usage, shell continuity with geometry raycasts at seams across multiple levels, missing-bay detection, and import validation. `npm run test:browser` checks browser rendering, thumbnails, repairs, roof changes, export, persistence, and mobile width. Install the Chromium test browser with `npx playwright install chromium` first when running outside CI.
 

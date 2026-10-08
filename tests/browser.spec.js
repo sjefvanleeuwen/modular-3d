@@ -3,13 +3,21 @@ import {test,expect} from '@playwright/test';
 test('full kit renders, seals, repairs, exports and survives reload',async({page},testInfo)=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');
+  await expect.poll(()=>page.evaluate(()=>window.moduleLab?.textureReady)).toBeTruthy();
   await expect(page.locator('#kitCoverage')).toHaveText('17 / 17 kit pieces used');
   await expect(page.locator('#sealState')).toHaveText('SEALED SHELL');
   await expect(page.locator('#catalog button img')).toHaveCount(17);
   await expect.poll(()=>page.evaluate(()=>[...document.querySelectorAll('#catalog img')].every(i=>i.complete&&i.naturalWidth===160))).toBeTruthy();
   await expect.poll(()=>page.evaluate(()=>window.moduleLab?.renderer.info.render.triangles||0)).toBeGreaterThan(1000);
+  expect(await page.evaluate(()=>window.moduleLab.texturedMeshes)).toBeGreaterThan(100);
   await page.screenshot({path:testInfo.outputPath('desktop.png'),fullPage:true});
   await testInfo.attach('desktop',{path:testInfo.outputPath('desktop.png'),contentType:'image/png'});
+  const partCount=await page.evaluate(()=>window.moduleLab.parts.length);
+  await page.locator('#surface').selectOption('clean');
+  await expect.poll(()=>page.evaluate(()=>window.moduleLab.texturedMeshes)).toBe(0);
+  await page.locator('#surface').selectOption('artwork');
+  await expect.poll(()=>page.evaluate(()=>window.moduleLab.texturedMeshes)).toBeGreaterThan(100);
+  expect(await page.evaluate(()=>window.moduleLab.parts.length)).toBe(partCount);
   await page.evaluate(()=>window.moduleLab.select(window.moduleLab.parts.find(p=>p.type==='hatch').id));
   await page.locator('#delete').click();
   await expect(page.locator('#sealState')).toHaveText('1 EXPOSED BAYS');
@@ -31,6 +39,7 @@ test('full kit renders, seals, repairs, exports and survives reload',async({page
 
 test('small screen keeps the viewer and properties reachable',async({page},testInfo)=>{
   await page.setViewportSize({width:390,height:844});await page.goto('/');
+  await expect.poll(()=>page.evaluate(()=>window.moduleLab?.textureReady)).toBeTruthy();
   await expect(page.locator('#sealState')).toHaveText('SEALED SHELL');
   await page.screenshot({path:testInfo.outputPath('mobile.png'),fullPage:true});
   await testInfo.attach('mobile',{path:testInfo.outputPath('mobile.png'),contentType:'image/png'});

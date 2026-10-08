@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TYPES, REVISION, DEFAULT_CONFIG, generateLayout, validProject, normalizeConfig, auditShell} from './model.js';
+import {loadArtwork} from './artwork.js';
 import {NAMES, CATEGORIES, makeModule, createMaterials, updateMaterials} from './modules.js';
 
 const $ = id => document.getElementById(id);
@@ -73,7 +74,8 @@ function highlight() {
   }
 }
 function rebuild({thumbnails = false} = {}) {
-  updateMaterials(materials, $('finish').value, $('accent').value);
+  updateMaterials(materials, $('finish').value, $('accent').value, $('surface').value);
+  if(materials.artworkReady) $('textureState').textContent = $('surface').value === 'artwork' ? 'Reference textures · perspective corrected' : 'Procedural colors · reference textures off';
   assembly.clear(); groups.clear();
   for (const p of parts) {const g = makeModule(p, materials); assembly.add(g); groups.set(p.id, g);}
   renderer.shadowMap.needsUpdate = true;
@@ -192,7 +194,7 @@ $('delete').onclick=remove;$('frame').onclick=frame;
 window.addEventListener('keydown',e=>{if(['INPUT','SELECT','BUTTON'].includes(e.target.tagName))return;if(e.key==='Escape')selectMode();if(e.key==='Delete')remove();if(e.key.toLowerCase()==='r')$('rotate').click();});
 $('generate').onclick=()=>generate();
 for(const k of ['width','depth','levels','roof'])$(k).oninput=()=>generate();
-for(const k of ['finish','accent'])$(k).oninput=()=>rebuild({thumbnails:true});
+for(const k of ['finish','accent','surface'])$(k).oninput=()=>rebuild({thumbnails:true});
 $('grid').onchange=()=>grid.visible=$('grid').checked;
 $('preset').onchange=()=>{if($('preset').value==='station')$('roof').value='utility';else if($('preset').value==='outpost')$('roof').value='mixed';generate();};
 $('reset').onclick=()=>{setConfig(DEFAULT_CONFIG);selectMode();generate();};
@@ -220,4 +222,6 @@ new ResizeObserver(()=>{
   if(firstResize){frame();firstResize=false;}
 }).observe(viewport);
 renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
-window.moduleLab={get parts(){return parts;},get audit(){return auditShell(parts,config());},generate,scene,renderer,select(id){selected=id;highlight();}};
+window.moduleLab={get textureReady(){return !!materials.artworkReady;},get texturedMeshes(){let n=0;assembly.traverse(o=>{if(o.userData.artworkFace)n++;});return n;},get parts(){return parts;},get audit(){return auditShell(parts,config());},generate,scene,renderer,select(id){selected=id;highlight();}};
+
+loadArtwork(materials, renderer).then(()=>{rebuild({thumbnails:true});$('status').textContent='Original artwork textures ready';}).catch(()=>{$('textureState').textContent='Reference textures unavailable · using procedural colors';});
